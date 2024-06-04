@@ -1,0 +1,116 @@
+---
+title: "stats205_final_project"
+output: pdf_document
+date: "2024-06-04"
+---
+
+```{r}
+library("rjags")
+library("coda")
+library("ggplot2")
+library("dplyr")
+```
+
+```{r}
+head(salaries)
+```
+
+```{r}
+# unique(salaries$job_title)
+# group similar jobs and group some in "others"
+
+subset(as.data.frame(table(salaries$job_title)), Freq > 400)
+```
+
+```{r}
+# use CA , GB , US and group other countries as "others"
+subset(as.data.frame(table(salaries$employee_residence)),Freq > 200)
+```
+
+```{r}
+salaries=read.csv("salaries.csv")
+salaries2=salaries %>% filter(job_title %in% c("Data Scientist", "Data Analyst", "Data Engineer", "Analytics Engineer", "Business Intelligence Engineer", "Machine Learning Engineer", "Research Scientist", "Applied Scientist"))
+
+salaries2$job_title[salaries2$job_title=="Business Intelligence Engineer"] = "BI Engineer"
+```
+
+```{r}
+# make new column for employee location inside the us vs outside the us
+salaries2$employee_residence2 = ifelse(salaries2$employee_residence == "US", "US", "Outside US")
+```
+
+```{r}
+ggplot(salaries2, aes(x=job_title, y=salary_in_usd)) +
+  geom_boxplot() +
+  labs(title="Salary Distribution by Job Title",
+       x="Job Title",
+       y="Salary in USD") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(salaries2, aes(x=employee_residence2, y=salary_in_usd)) +
+  geom_boxplot() +
+  labs(
+    title="Salary Distribution by Inside or Outside the US",
+    x="Location",
+    y="Salary in USD")
+```
+
+
+```{r}
+N=dim(salaries2)[1]
+job=as.numeric(factor(salaries2$job_title))
+n_jobs=length(as.numeric(table(job)))
+y=salaries2$salary_in_usd
+```
+
+```{r}
+y.bar.jobs = rep(0,n_jobs)
+s2.jobs = rep(0,n_jobs)
+
+for (i in 1:n_jobs){
+  y.bar.jobs[i] <- mean(y[which(job==i)])
+  s2.jobs[i] <- var(y[which(job==i)])
+}
+
+mean.y.bar.jobs<- mean(y.bar.jobs)
+mean.s2.jobs <- mean(s2.jobs)
+var.y.bar.jobs <- var(y.bar.jobs)
+
+init.val <- list(
+  mu=y.bar.jobs,
+  precision=1/s2.jobs,
+  mu_0=mean.y.bar.jobs,
+  itau=1/var.y.bar.jobs
+)
+
+mu_0_sigma=1/(1000^2)
+tau_1=1
+tau_2=1
+sigma_1=1
+sigma_2=1
+
+data_list <- list('y' = y,
+                  'N' = N,
+                  'n_jobs' = n_jobs,
+                  'job' = job,
+                  'sigma_1'=sigma_1,
+                  'sigma_2'=sigma_2,
+                  'mu_0_sigma'=mu_0_sigma,
+                  'tau_1'=tau_1,
+                  'tau_2'=tau_2)
+```
+
+```{r}
+jags <- jags.model('job_position_model.txt',
+                   data=data_list,
+                   inits=init.val,
+                   n.chains=1)
+
+
+jags.output.coda <- coda.samples(jags,c('tau', 'sigma', 'mu_0', 'mu'),10000)
+s = summary(jags.output.coda)
+s
+```
+

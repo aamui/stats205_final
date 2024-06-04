@@ -1,0 +1,19 @@
+model{
+
+	for (i in 1:N){
+		y[i] ~ dnorm(a[i], b[i])
+		a[i] = mu[job[i]]
+		b[i] = precision[job[i]]
+	}
+
+	for (j in 1:n_jobs){
+		mu[j] ~ dnorm(mu_0, itau)
+		precision[j] ~ dgamma(sigma_1, sigma_2)
+	}
+
+	mu_0 ~ dnorm(0, mu_0_sigma)
+	itau ~ dgamma(tau_1, tau_2)
+
+	tau=1/itau
+	sigma=1/precision
+}
