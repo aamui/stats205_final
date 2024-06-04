@@ -17,13 +17,13 @@ head(salaries)
 
 ```{r}
 # unique(salaries$job_title)
-# group similar jobs and group some in "others"
+# group similar jobs and group misc jobs in "others". 
 
 subset(as.data.frame(table(salaries$job_title)), Freq > 400)
 ```
 
 ```{r}
-# use CA , GB , US and group other countries as "others"
+# use CA , GB , US and group other countries as "others".
 subset(as.data.frame(table(salaries$employee_residence)),Freq > 200)
 ```
 
