@@ -14,7 +14,23 @@ salfilt <- filter(sal,job_title %in% c('Data Engineer','Data Scientist','Machine
 
 table(sal$company_location)
 salfilt2 <- filter(sal,company_location %in% c('US','GB','CA','ES','DE'))
+salfilt3 <- filter(salfilt2,job_title %in% c('Data Engineer','Data Scientist','Machine Learning Engineer','Data Analyst'))
 salfilt2stan <- salfilt2 %>% select(salary_in_usd,company_location)
+
+salfiltfinal <- sal %>%
+  mutate(
+    grouped_job_title = case_when(
+      grepl("Machine Learning|ML", job_title) ~ "Machine Learning Engineer",
+      grepl("Data Science|Data Scientist", job_title)~ "Data Scientist",
+      grepl("Data Analyst|Data Analytics|Visualization", job_title)  ~ "Data Analyst",
+      grepl("AI|Artificial Intelligence", job_title) ~ "AI Engineer",
+      grepl("Business Intelligence|BI", job_title) ~ "Business Intelligence",
+      grepl("Data Engineer", job_title) ~ "Data Engineer",
+      TRUE ~ "Other"
+    )
+  )
+
+salfiltfinal = salfiltfinal %>% filter(employee_residence %in% c("CA", "DE", "ES", "GB", "US"))
 ###################################
 salmodelstan <- stan_glm(salary_in_usd ~ job_title, data = salfilt,
                          family = gaussian,
@@ -57,7 +73,7 @@ model {
 }
 '
 
-salfilt2stan$company_location <- as.numeric(factor(salfilt2stan$company_location))
+salfilt2stan$company_location <- as.numeric(factor(salfilt2stan$company_location)) #Alphabetical Coding: CA, DE, ES, GB, US
 
 # Prepare the data for Stan
 N <- nrow(salfilt2stan)
@@ -67,5 +83,12 @@ salary <- salfilt2stan$salary_in_usd
 
 
 modellocmc <- stan(model_code =modelloc, data=list(N = N, K = K, country = country, salary = salary), iter = 5000*2, chains = 4)
-summary(modellocmc)
+summary(modellocmc) #CA=1, DE=2, ES=3, GB=4, US=5
 mcmc_trace(modellocmc)
+
+#########################################
+model2 <- stan_glm(salary_in_usd~employee_residence+grouped_job_title+employee_residence*grouped_job_title,data=salfiltfinal,
+                   family = gaussian,
+                   prior = normal(0,100^2), 
+                   chains = 4, iter = 5000*2, seed = 84735)
+summary(model2)
