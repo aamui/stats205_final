@@ -11,37 +11,30 @@ library("ggplot2")
 library("dplyr")
 ```
 
-```{r}
-# some change
-head(salaries)
-```
 
-```{r}
-# unique(salaries$job_title)
-# group similar jobs and group misc jobs in "others". 
-
-subset(as.data.frame(table(salaries$job_title)), Freq > 400)
-```
-
-```{r}
-# use CA , GB , US and group other countries as "others".
-subset(as.data.frame(table(salaries$employee_residence)),Freq > 200)
-```
 
 ```{r}
 salaries=read.csv("salaries.csv")
-salaries2=salaries %>% filter(job_title %in% c("Data Scientist", "Data Analyst", "Data Engineer", "Analytics Engineer", "Business Intelligence Engineer", "Machine Learning Engineer", "Research Scientist", "Applied Scientist"))
+df <- salaries %>%
+  mutate(
+    grouped_job_title = case_when(
+      grepl("Machine Learning|ML", job_title) ~ "Machine Learning Engineer",
+      grepl("Data Science|Data Scientist", job_title)~ "Data Scientist",
+      grepl("Data Analyst|Data Analytics|Visualization", job_title)  ~ "Data Analyst",
+      grepl("AI|Artificial Intelligence", job_title) ~ "AI Engineer",
+      grepl("Business Intelligence|BI", job_title) ~ "Business Intelligence",
+      grepl("Data Engineer", job_title) ~ "Data Engineer",
+      TRUE ~ "Other"
+    )
+  )
 
-salaries2$job_title[salaries2$job_title=="Business Intelligence Engineer"] = "BI Engineer"
+df = df %>% filter(employee_residence %in% c("CA", "DE", "ES", "GB", "US"))
 ```
 
-```{r}
-# make new column for employee location inside the us vs outside the us
-salaries2$employee_residence2 = ifelse(salaries2$employee_residence == "US", "US", "Outside US")
-```
+
 
 ```{r}
-ggplot(salaries2, aes(x=job_title, y=salary_in_usd)) +
+ggplot(df, aes(x=grouped_job_title, y=salary_in_usd)) +
   geom_boxplot() +
   labs(title="Salary Distribution by Job Title",
        x="Job Title",
@@ -50,7 +43,7 @@ ggplot(salaries2, aes(x=job_title, y=salary_in_usd)) +
 ```
 
 ```{r}
-ggplot(salaries2, aes(x=employee_residence2, y=salary_in_usd)) +
+ggplot(df, aes(x=employee_residence, y=salary_in_usd)) +
   geom_boxplot() +
   labs(
     title="Salary Distribution by Inside or Outside the US",
@@ -60,10 +53,10 @@ ggplot(salaries2, aes(x=employee_residence2, y=salary_in_usd)) +
 
 
 ```{r}
-N=dim(salaries2)[1]
-job=as.numeric(factor(salaries2$job_title))
+N=dim(df)[1]
+job=as.numeric(factor(df$grouped_job_title))
 n_jobs=length(as.numeric(table(job)))
-y=salaries2$salary_in_usd
+y=df$salary_in_usd
 ```
 
 ```{r}
