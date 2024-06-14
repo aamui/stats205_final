@@ -31,12 +31,25 @@ df <- salaries %>%
 df = df %>% filter(employee_residence %in% c("CA", "DE", "ES", "GB", "US"))
 ```
 
+```{r}
+colnames(df)
+```
+
+```{r}
+# en = entry level, ex = intermediate, mi = mid level, se = senior
+ggplot(df, aes(x=experience_level, y=salary_in_usd)) +
+  geom_boxplot() +
+  labs(title="Salary distribution by experience level",
+       x="Experience Level",
+       y="Salary in USD") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
 
 
 ```{r}
 ggplot(df, aes(x=grouped_job_title, y=salary_in_usd)) +
   geom_boxplot() +
-  labs(title="Salary Distribution by Job Title",
+  labs(title="Salary distribution by job title",
        x="Job Title",
        y="Salary in USD") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
@@ -46,7 +59,7 @@ ggplot(df, aes(x=grouped_job_title, y=salary_in_usd)) +
 ggplot(df, aes(x=employee_residence, y=salary_in_usd)) +
   geom_boxplot() +
   labs(
-    title="Salary Distribution by Inside or Outside the US",
+    title="Salary distribution by country",
     x="Location",
     y="Salary in USD")
 ```
@@ -106,5 +119,9 @@ jags <- jags.model('job_position_model.txt',
 jags.output.coda <- coda.samples(jags,c('tau', 'sigma', 'mu_0', 'mu'),10000)
 s = summary(jags.output.coda)
 s
+```
+
+```{r}
+unique(df$grouped_job_title)
 ```
 
