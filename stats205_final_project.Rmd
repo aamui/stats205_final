@@ -9,6 +9,8 @@ library("rjags")
 library("coda")
 library("ggplot2")
 library("dplyr")
+library("rstan")
+library("rstanarm")
 ```
 
 
@@ -31,9 +33,6 @@ df <- salaries %>%
 df = df %>% filter(employee_residence %in% c("CA", "DE", "ES", "GB", "US"))
 ```
 
-```{r}
-colnames(df)
-```
 
 ```{r}
 # en = entry level, ex = intermediate, mi = mid level, se = senior
@@ -41,6 +40,22 @@ ggplot(df, aes(x=experience_level, y=salary_in_usd)) +
   geom_boxplot() +
   labs(title="Salary distribution by experience level",
        x="Experience Level",
+       y="Salary in USD") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(df, aes(x = factor(remote_ratio))) +
+  geom_bar(fill = "gray") +
+  theme_minimal() +
+  labs(title = "Distribution of Remote Ratios", x = "Remote Ratio", y = "Count")
+```
+
+```{r}
+ggplot(df, aes(x=factor(remote_ratio), y=salary_in_usd)) +
+  geom_boxplot() +
+  labs(title="Salary distribution by remote ratio",
+       x="Remote ratio",
        y="Salary in USD") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
@@ -63,8 +78,6 @@ ggplot(df, aes(x=employee_residence, y=salary_in_usd)) +
     x="Location",
     y="Salary in USD")
 ```
-
-
 ```{r}
 N=dim(df)[1]
 job=as.numeric(factor(df$grouped_job_title))
@@ -122,6 +135,33 @@ s
 ```
 
 ```{r}
-unique(df$grouped_job_title)
+modeljob <- '
+data {
+  int<lower=0> N;  // Number of observations
+  int<lower=1> K;  // Number of jobs
+  int<lower=1, upper=K> job[N];  // Country index for each observation
+  real salary[N];  // Salary observations
+}
+
+parameters {
+  vector[K] mu;  // Mean salary for each job
+  vector<lower=0>[K] sigma;  // Standard deviation of salary for each job
+}
+
+model {
+  for (i in 1:N)
+    salary[i] ~ normal(mu[job[i]], sigma[job[i]]);
+}
+'
+
+N <- nrow(df)
+K <- length(unique(df$grouped_job_title))
+job <- as.numeric(factor(df$grouped_job_title))
+salary <- df$salary_in_usd
+
+modeljobmc <- stan(model_code =modeljob, data=list(N = N, K = K, job = job, salary = salary), iter = 5000*2, chains = 4)
+summary(modeljobmc)
+mcmc_trace(modeljobmc)
 ```
+
 
