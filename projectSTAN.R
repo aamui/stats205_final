@@ -7,7 +7,7 @@ library(bayesplot)
 library(bayesrules)
 
 #read data
-sal <- read.csv("C:/Users/Steven/Documents/UCI/SPRING/STATS205P/salaries.csv")
+sal <- read.csv("salaries.csv")
 
 table(sal$job_title)
 salfilt <- filter(sal,job_title %in% c('Data Engineer','Data Scientist','Machine Learning Engineer','Data Analyst'))
@@ -98,4 +98,3 @@ model2 <- stan_glm(salary_in_usd~employee_residence+grouped_job_title+employee_r
                    prior = normal(0,100^2), 
                    chains = 4, iter = 5000*2, seed = 84735)
 summary(model2)
-

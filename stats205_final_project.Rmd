@@ -14,6 +14,7 @@ library(rstanarm)
 library(bayesplot)
 library(bayesrules)
 library(tidybayes)
+library(stringr)
 ```
 
 
@@ -36,12 +37,12 @@ df <- salaries %>%
 df = df %>% filter(employee_residence %in% c("CA", "DE", "ES", "GB", "US"))
 ```
 
-
-
-
 ```{r}
-dim(df)
+unique(salaries %>%
+  filter(str_detect(job_title, regex("AI", ignore_case = TRUE))) %>%
+  select(job_title))
 ```
+
 
 ```{r}
 # Histogram using ggplot2
