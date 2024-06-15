@@ -65,21 +65,27 @@ data {
 parameters {
   vector[K] mu;  // Mean salary for each country
   vector<lower=0>[K] sigma;  // Standard deviation of salary for each country
+  real<lower = 0> mu0;         // Hyperparameter for mu
+  real<lower = 0> tau;         // Hyperparameter for sigma
 }
 
 model {
   for (i in 1:N)
     salary[i] ~ normal(mu[country[i]], sigma[country[i]]);
+  mu ~ normal(mu0, tau);           // Prior for mu
+  sigma ~ scaled_inv_chi_square(1, .05); // Prior for sigma
+  mu0 ~ normal(0, 1000000);        // Hyperprior for mu0
+  tau ~ scaled_inv_chi_square(1, .05);
 }
 '
 
-salfilt2stan$company_location <- as.numeric(factor(salfilt2stan$company_location)) #Alphabetical Coding: CA, DE, ES, GB, US
+#salfiltstan$company_location <- as.numeric(factor(salfiltfinal$employee_residence)) #Alphabetical Coding: CA, DE, ES, GB, US
 
 # Prepare the data for Stan
-N <- nrow(salfilt2stan)
-K <- length(unique(salfilt2stan$company_location))
-country <- as.numeric(salfilt2stan$company_location)
-salary <- salfilt2stan$salary_in_usd
+N <- nrow(salfiltfinal)
+K <- length(unique(salfiltfinal$employee_residence))
+country <- as.numeric(factor(salfiltfinal$employee_residence))
+salary <- salfiltfinal$salary_in_usd
 
 
 modellocmc <- stan(model_code =modelloc, data=list(N = N, K = K, country = country, salary = salary), iter = 5000*2, chains = 4)
@@ -92,3 +98,4 @@ model2 <- stan_glm(salary_in_usd~employee_residence+grouped_job_title+employee_r
                    prior = normal(0,100^2), 
                    chains = 4, iter = 5000*2, seed = 84735)
 summary(model2)
+
