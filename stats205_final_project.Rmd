@@ -5,12 +5,15 @@ date: "2024-06-04"
 ---
 
 ```{r}
-library("rjags")
-library("coda")
-library("ggplot2")
-library("dplyr")
-library("rstan")
-library("rstanarm")
+library(rjags)
+library(coda)
+library(ggplot2)
+library(dplyr)
+library(rstan)
+library(rstanarm)
+library(bayesplot)
+library(bayesrules)
+library(tidybayes)
 ```
 
 
@@ -31,6 +34,27 @@ df <- salaries %>%
   )
 
 df = df %>% filter(employee_residence %in% c("CA", "DE", "ES", "GB", "US"))
+```
+
+
+
+
+```{r}
+dim(df)
+```
+
+```{r}
+# Histogram using ggplot2
+ggplot(df, aes(x = salary_in_usd)) +
+  geom_histogram(binwidth = 5000, fill = "grey", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Salaries", x = "Salary in USD", y = "Frequency") +
+  theme_minimal()
+```
+```{r}
+df %>%
+  filter(employee_residence %in% c("CA","US")) %>%
+  summarise(mean_salary = mean(salary_in_usd, na.rm = TRUE)) %>%
+  pull(mean_salary)
 ```
 
 
@@ -105,11 +129,11 @@ init.val <- list(
   itau=1/var.y.bar.jobs
 )
 
-mu_0_sigma=1/(1000^2)
+mu_0_sigma=1/1000000
 tau_1=1
-tau_2=1
+tau_2=2 / (1e-9)
 sigma_1=1
-sigma_2=1
+sigma_2=2 / (1e-9)
 
 data_list <- list('y' = y,
                   'N' = N,
@@ -121,6 +145,7 @@ data_list <- list('y' = y,
                   'tau_1'=tau_1,
                   'tau_2'=tau_2)
 ```
+
 
 ```{r}
 jags <- jags.model('job_position_model.txt',
@@ -138,19 +163,25 @@ s
 modeljob <- '
 data {
   int<lower=0> N;  // Number of observations
-  int<lower=1> K;  // Number of jobs
+  int<lower=1> K;  // Number of countries
   int<lower=1, upper=K> job[N];  // Country index for each observation
   real salary[N];  // Salary observations
 }
 
 parameters {
-  vector[K] mu;  // Mean salary for each job
-  vector<lower=0>[K] sigma;  // Standard deviation of salary for each job
+  vector[K] mu;  // Mean salary for each country
+  vector<lower=0>[K] sigma;  // Standard deviation of salary for each country
+  real<lower = 0> mu0;         // Hyperparameter for mu
+  real<lower = 0> tau;         // Hyperparameter for sigma
 }
 
 model {
   for (i in 1:N)
     salary[i] ~ normal(mu[job[i]], sigma[job[i]]);
+  mu ~ normal(mu0, tau);           // Prior for mu
+  sigma ~ scaled_inv_chi_square(1, .05); // Prior for sigma
+  mu0 ~ normal(0, 1000000);        // Hyperprior for mu0
+  tau ~ scaled_inv_chi_square(1, .05);
 }
 '
 
@@ -159,9 +190,8 @@ K <- length(unique(df$grouped_job_title))
 job <- as.numeric(factor(df$grouped_job_title))
 salary <- df$salary_in_usd
 
-modeljobmc <- stan(model_code =modeljob, data=list(N = N, K = K, job = job, salary = salary), iter = 5000*2, chains = 4)
+modeljobmc <- stan(model_code =modeljob, data=list(N = N, K = K, job = job, salary = salary), iter = 5000*2, chains = 1)
 summary(modeljobmc)
-mcmc_trace(modeljobmc)
 ```
 
 
