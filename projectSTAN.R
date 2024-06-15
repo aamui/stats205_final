@@ -78,7 +78,7 @@ model {
   tau ~ scaled_inv_chi_square(1, .05);
 }
 '
-
+#.
 #salfiltstan$company_location <- as.numeric(factor(salfiltfinal$employee_residence)) #Alphabetical Coding: CA, DE, ES, GB, US
 
 # Prepare the data for Stan
